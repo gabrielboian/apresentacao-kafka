@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8080:8080
+    depends_on:
+      - kafka-1
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9194
+      DYNAMIC_CONFIG_ENABLED: 'true'  # not necessary, added for tests
+      KAFKA_CLUSTERS_0_AUDIT_TOPICAUDITENABLED: 'true'
+      KAFKA_CLUSTERS_0_AUDIT_CONSOLEAUDITENABLED: 'true'
+    networks:
+      - elastic
+      
+  zookeeper:
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - '2181:2181'
+    container_name: 'zookeeper'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - elastic
+
+  kafka-1:
+    image: bitnami/kafka:latest
+    container_name: 'kafka'
+    networks:
+      - elastic
+    environment:
+      - KAFKA_ENABLE_KRAFT=no
+      # - KAFKA_BROKER_ID=1
+      # - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENERS=CONTROLLER://kafka:9192,EXTERNAL://:9193,PLAINTEXT://kafka:9194
+      - KAFKA_CFG_ADVERTISED_LISTENERS=EXTERNAL://localhost:9193,PLAINTEXT://kafka:9194
+      - BITNAMI_DEBUG=true
+    ports:
+      - '9192:9192'
+      - '9193:9193'
+      - '9194:9194'
+    expose:
+      - 9193
+      - 9194
+      - 9192
+    depends_on:
+      - zookeeper
+
+networks:
+  elastic:
+    driver: bridge
